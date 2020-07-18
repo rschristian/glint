@@ -137,9 +137,21 @@ impl<'a> FilesPrompt<'a> {
             let focused_color = ct::Color::Blue;
             let default_color = ct::Color::Reset;
 
-            let status_untracked = style('+').with(ct::Color::Rgb { r: 96, g: 218, b: 177 });
-            let status_modified = style('•').with(ct::Color::Rgb { r: 96, g: 112, b: 218 });
-            let status_deleted = style('-').with(ct::Color::Rgb { r: 218, g: 96, b: 118 });
+            let status_untracked = style('+').with(ct::Color::Rgb {
+                r: 96,
+                g: 218,
+                b: 177,
+            });
+            let status_modified = style('•').with(ct::Color::Rgb {
+                r: 96,
+                g: 112,
+                b: 218,
+            });
+            let status_deleted = style('-').with(ct::Color::Rgb {
+                r: 218,
+                g: 96,
+                b: 118,
+            });
             let status_none = style(' ');
 
             // Padded limit (never overflows by 1 item)
@@ -152,7 +164,11 @@ impl<'a> FilesPrompt<'a> {
                 .enumerate()
                 .take(take + 1)
             {
-                let line_color = if i as u16 == self.focused_index { focused_color } else { default_color };
+                let line_color = if i as u16 == self.focused_index {
+                    focused_color
+                } else {
+                    default_color
+                };
 
                 let checked = if i == 0 {
                     self.checked.iter().all(|&x| x)

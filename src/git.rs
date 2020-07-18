@@ -61,7 +61,11 @@ impl Git {
         }
     }
 
-    pub fn commit<I>(&self, message: &str, other_args: impl IntoIterator<Item = I>) -> io::Result<ExitStatus>
+    pub fn commit<I>(
+        &self,
+        message: &str,
+        other_args: impl IntoIterator<Item = I>,
+    ) -> io::Result<ExitStatus>
     where
         I: AsRef<OsStr>,
     {
@@ -88,7 +92,10 @@ impl Git {
     where
         I: AsRef<OsStr>,
     {
-        let log_stdout = self.log(other_args)?.stdout.expect("must be able to access stdout");
+        let log_stdout = self
+            .log(other_args)?
+            .stdout
+            .expect("must be able to access stdout");
         Ok(parse_log::parse_logs(
             BufReader::new(log_stdout).lines().filter_map(Result::ok),
         ))

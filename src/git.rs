@@ -3,7 +3,7 @@ use std::ffi::OsStr;
 use std::fmt;
 use std::io::{self, BufRead, BufReader};
 use std::path::PathBuf;
-use std::process::{Command, Stdio};
+use std::process::{Child, Command, ExitStatus, Stdio};
 
 mod parse_log;
 
@@ -61,79 +61,50 @@ impl Git {
         }
     }
 
-    pub fn commit<I>(&self, message: &str, other_args: impl IntoIterator<Item = I>) -> Command
+    pub fn commit<I>(&self, message: &str, other_args: impl IntoIterator<Item = I>) -> io::Result<ExitStatus>
     where
         I: AsRef<OsStr>,
     {
-        let mut command = Command::new("git");
-
-        // Setup
-        command.current_dir(&self.cwd);
-        command.stdin(Stdio::null());
-
-        // Args
-        command.arg("commit");
-        command.arg("-m");
-        command.arg(message);
-        for arg in other_args {
-            command.arg(arg);
-        }
-
-        command
+        Command::new("git")
+            .current_dir(&self.cwd)
+            .args(&["commit", "-m", message])
+            .args(other_args.into_iter())
+            .status()
     }
 
-    pub fn log<I>(&self, other_args: impl IntoIterator<Item = I>) -> Command
+    pub fn log<I>(&self, other_args: impl IntoIterator<Item = I>) -> io::Result<Child>
     where
         I: AsRef<OsStr>,
     {
-        let mut command = Command::new("git");
-
-        // Setup
-        command.current_dir(&self.cwd);
-        command.stdin(Stdio::null());
-
-        // Args
-        command.arg("log");
-        for arg in other_args {
-            command.arg(arg);
-        }
-        command.arg("--raw");
-        command.arg("--pretty=raw");
-
-        command
+        Command::new("git")
+            .current_dir(&self.cwd)
+            .args(&["log", "--raw", "--pretty=raw"])
+            .args(other_args.into_iter())
+            .stdout(Stdio::piped())
+            .spawn()
     }
 
     pub fn log_parsed<I>(&self, other_args: impl IntoIterator<Item = I>) -> io::Result<Vec<LogItem>>
     where
         I: AsRef<OsStr>,
     {
-        let proc = self.log(other_args).stdout(Stdio::piped()).spawn()?;
-        let stdout = proc.stdout.expect("must be able to access stdout");
+        let log_stdout = self.log(other_args)?.stdout.expect("must be able to access stdout");
         Ok(parse_log::parse_logs(
-            BufReader::new(stdout).lines().filter_map(Result::ok),
+            BufReader::new(log_stdout).lines().filter_map(Result::ok),
         ))
     }
 
     /// Stages files using `git add`. Run from the repo root.gs
-    pub fn add<I>(&self, files: impl IntoIterator<Item = I>) -> Command
+    pub fn add<I>(&self, files: impl IntoIterator<Item = I>) -> io::Result<()>
     where
         I: AsRef<OsStr>,
     {
-        let mut command = Command::new("git");
-
-        // Setup
-        command.current_dir(&self.repo_root);
-        command.stdin(Stdio::null());
-
-        // Args
-        command.arg("add");
-        command.arg("--");
-
-        for file in files {
-            command.arg(file.as_ref());
-        }
-
-        command
+        Command::new("git")
+            .current_dir(&self.repo_root)
+            .args(&["add", "--"])
+            .args(files.into_iter())
+            .status()?;
+        Ok(())
     }
 
     pub fn diff_less<I>(&self, files: impl IntoIterator<Item = I>) -> io::Result<()>
@@ -142,16 +113,14 @@ impl Git {
     {
         let diff = Command::new("git")
             .current_dir(&self.repo_root)
-            .arg("diff")
-            .arg("--color=always")
-            .arg("--")
+            .args(&["diff", "--color=always", "--"])
             .args(files.into_iter())
             .stdout(Stdio::piped())
             .spawn()?;
 
         Command::new("less")
-            .arg("-R")
             .current_dir(&self.repo_root)
+            .arg("-R")
             .stdin(diff.stdout.ok_or_else(|| {
                 io::Error::new(io::ErrorKind::Other, "failed to get stdout of git diff")
             })?)
@@ -161,17 +130,13 @@ impl Git {
     }
 
     pub fn status(&self) -> io::Result<GitStatus> {
-        let mut command = Command::new("git");
+        let command = Command::new("git")
+            .current_dir(&self.cwd)
+            .args(&["status", "--porcelain"])
+            .stdout(Stdio::piped())
+            .spawn()?;
 
-        // Setup
-        command.current_dir(&self.cwd);
-        command.stdout(Stdio::piped());
-
-        // Args
-        command.arg("status");
-        command.arg("--porcelain");
-
-        let stdout = command.spawn()?.stdout.ok_or_else(|| {
+        let stdout = command.stdout.ok_or_else(|| {
             io::Error::new(io::ErrorKind::Other, "Could not capture standard output.")
         })?;
 

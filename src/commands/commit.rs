@@ -161,14 +161,14 @@ pub fn commit(params: cli::Commit, config: Config) {
             }
             Stage::Complete(ty, scope, message) => {
                 if let Some(commit_files) = commit_files {
-                    let _r = git.add(commit_files).status();
+                    let _r = git.add(commit_files);
                 }
 
                 let commit = Commit { ty, scope, message };
 
                 let git_message = commit.build_message();
 
-                match git.commit(&git_message, params.git_args).status() {
+                match git.commit(&git_message, params.git_args) {
                     Ok(status) if status.success() => println!("Commit successful."),
                     Ok(status) => match status.code() {
                         Some(code) => {

@@ -64,9 +64,9 @@ impl<'a> FilesPrompt<'a> {
                 // The right arrow strokes are also aliased to the diff shortcut, since
                 // it's like going deeper into the tree
                 *key = match key {
-                    KeyCode::Char('k') => KeyCode::Up,
-                    KeyCode::Char('j') => KeyCode::Down,
-                    KeyCode::Char('l') | KeyCode::Right => KeyCode::Char('d'),
+                    KeyCode::Char('l') => KeyCode::Up,
+                    KeyCode::Char('k') => KeyCode::Down,
+                    KeyCode::Char(';') | KeyCode::Right => KeyCode::Char('d'),
                     _ => *key,
                 };
             }

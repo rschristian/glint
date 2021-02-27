@@ -20,19 +20,17 @@ impl Default for Config {
     fn default() -> Self {
         Config {
             types: vec![
-                "build",
                 "ci",
                 "chore",
                 "docs",
                 "feat",
                 "fix",
-                "perf",
+                "junk",
+                "misc",
                 "refactor",
                 "revert",
                 "style",
-                "test",
-                "enhance",
-                "improvement",
+                "test"
             ]
             .into_iter()
             .map(String::from)
